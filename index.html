@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工坊收益数据看板</title>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+<style>
+:root{--bg:#f3f5fa;--card:#fff;--border:#e6e9f0;--text:#1f2430;--t2:#6b7280;--t3:#9aa1ad;--primary:#4f6bed;--iap:#22c55e;--spec:#f59e0b;--shadow:0 1px 2px rgba(16,24,40,.04),0 4px 16px rgba(16,24,40,.06)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;background:linear-gradient(180deg,#eef1f8,#f3f5fa 240px);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased}
+.app-header{background:linear-gradient(120deg,#35408f,#4f6bed 60%,#5b7cff);color:#fff;padding:26px 32px 62px}
+.app-header .inner{max-width:1280px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between}
+.app-title{display:flex;align-items:center;gap:14px}
+.app-logo{width:44px;height:44px;border-radius:12px;background:rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center;font-size:24px}
+.app-title h1{font-size:22px;font-weight:700}
+.app-title p{font-size:13px;color:rgba(255,255,255,.82);margin-top:3px}
+.app-meta{text-align:right;font-size:12.5px;color:rgba(255,255,255,.85)}
+.app-meta .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#4ade80;margin-right:6px}
+.app-body{max-width:1280px;margin:-38px auto 40px;padding:0 24px}
+.tabs{display:flex;gap:6px;background:var(--card);border-radius:16px;padding:6px;box-shadow:var(--shadow);margin-bottom:20px;overflow-x:auto}
+.tab-btn{flex:1;min-width:150px;border:none;background:transparent;cursor:pointer;padding:13px 16px;border-radius:11px;font-size:14.5px;font-weight:600;color:var(--t2);display:flex;align-items:center;justify-content:center;gap:8px;transition:.2s;white-space:nowrap}
+.tab-btn:hover{color:var(--primary);background:#f2f4fb}
+.tab-btn.active{background:linear-gradient(120deg,#4f6bed,#5b7cff);color:#fff;box-shadow:0 6px 14px rgba(79,107,237,.32)}
+.panel{display:none}.panel.active{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.module{background:var(--card);border-radius:14px;box-shadow:var(--shadow);padding:20px 22px;margin-bottom:18px}
+.module-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.module-title{font-size:15.5px;font-weight:700;display:flex;align-items:center;gap:9px}
+.module-title::before{content:"";width:4px;height:16px;border-radius:2px;background:linear-gradient(180deg,#4f6bed,#5b7cff)}
+.module-sub{font-size:12.5px;color:var(--t3);margin-top:2px}
+.filter-row{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.filter-label{font-size:13px;color:var(--t2);font-weight:600}
+select.year-select{padding:8px 14px;border:1px solid var(--border);border-radius:9px;font-size:14px;background:#fff;cursor:pointer;outline:none}
+.month-pills,.year-pills{display:flex;gap:6px;flex-wrap:wrap}
+.month-pill{padding:7px 13px;border:1px solid var(--border);background:#fff;border-radius:9px;font-size:13px;color:var(--t2);cursor:pointer;transition:.15s}
+.month-pill:hover{border-color:var(--primary);color:var(--primary)}
+.month-pill.active{background:var(--primary);border-color:var(--primary);color:#fff;font-weight:600}
+.month-pill:disabled{opacity:.35;cursor:not-allowed}
+.year-pill{padding:9px 26px;border:1px solid var(--border);background:#fff;border-radius:10px;font-size:14px;font-weight:600;color:var(--t2);cursor:pointer;transition:.15s}
+.year-pill.active{background:var(--primary);border-color:var(--primary);color:#fff}
+.kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}
+.kpi-card{border-radius:13px;padding:16px 18px;border:1px solid var(--border);background:linear-gradient(180deg,#fff,#fafbfe)}
+.kpi-card.hl{background:linear-gradient(135deg,#35408f,#4f6bed);border:none;color:#fff}
+.kpi-card.hl .kpi-label,.kpi-card.hl .kpi-sub{color:rgba(255,255,255,.8)}
+.kpi-card.hl .kpi-value{color:#fff}
+.kpi-label{font-size:13px;color:var(--t2);display:flex;align-items:center;gap:6px}
+.kpi-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.kpi-value{font-size:25px;font-weight:800;margin-top:8px;line-height:1.1}
+.kpi-value small{font-size:14px;font-weight:600;margin-left:2px}
+.kpi-sub{font-size:12px;color:var(--t3);margin-top:6px}
+.kpi-badge{display:inline-block;font-size:11.5px;font-weight:700;padding:2px 8px;border-radius:20px;background:rgba(79,107,237,.1);color:var(--primary)}
+.kpi-card.hl .kpi-badge{background:rgba(255,255,255,.2);color:#fff}
+.chart-grid{display:grid;grid-template-columns:1fr 1.6fr;gap:16px;margin:16px 0}
+.chart-box{border:1px solid var(--border);border-radius:13px;padding:14px;background:#fafbfe}
+.box-title{font-size:14px;font-weight:700;margin-bottom:4px}
+.box-sub{font-size:12px;color:var(--t3);margin-bottom:8px}
+.chart{width:100%;height:300px}
+.table-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.search-input{padding:8px 14px 8px 34px;border:1px solid var(--border);border-radius:9px;font-size:13.5px;width:260px;outline:none;background:#fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%239aa1ad' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.3-4.3'/%3E%3C/svg%3E") no-repeat 10px center}
+.btn-export{padding:8px 16px;border:1px solid var(--border);background:#fff;border-radius:9px;font-size:13px;font-weight:600;color:var(--t2);cursor:pointer}
+.btn-export:hover{border-color:var(--primary);color:var(--primary)}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+thead th{text-align:left;padding:11px 14px;color:var(--t2);font-weight:600;font-size:12.5px;background:#f7f8fc;border-bottom:1px solid var(--border);white-space:nowrap;cursor:pointer;user-select:none}
+tbody td{padding:12px 14px;border-bottom:1px solid #f0f2f7;white-space:nowrap}
+tbody tr:hover{background:#f8faff}
+tbody tr:last-child td{border-bottom:none}
+.num{text-align:right;font-variant-numeric:tabular-nums}
+.rank{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:7px;font-size:12px;font-weight:700;background:#eef1f7;color:var(--t2)}
+.rank.r1{background:#f7b733;color:#7a4b00}.rank.r2{background:#b8c4d8;color:#3c4a5c}.rank.r3{background:#e8944a;color:#6e3b0d}
+.name-cell{font-weight:600}
+.tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:20px;background:#f1f4fb;color:var(--t2)}
+.tag.type{background:rgba(79,107,237,.08);color:var(--primary)}
+.total-cell{font-weight:700;color:var(--primary)}
+.chg{display:block;font-size:11px;margin-top:3px;font-weight:600;line-height:1}
+.chg.up{color:#16a34a}
+.chg.down{color:#ef4444}
+.chg.flat{color:#c3c9d4}
+.th-sub{display:block;font-size:10.5px;font-weight:500;color:var(--t3);margin-top:2px}
+.empty{text-align:center;color:var(--t3);padding:40px 0}
+@media(max-width:900px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.chart-grid{grid-template-columns:1fr}.app-header{padding:20px 18px 58px}}
+</style>
+</head>
+<body>
+<header class="app-header"><div class="inner">
+  <div class="app-title"><div class="app-logo">🏭</div><div><h1>工坊收益数据看板</h1><p>激励金 · 内购分成 · 光谱计划奖金 综合收益分析</p></div></div>
+  <div class="app-meta"><span class="dot"></span>数据已同步<br>更新于 2026-09-10 08:00</div>
+</div></header>
+
+<div class="app-body">
+  <nav class="tabs" id="tabs">
+    <button class="tab-btn active" data-tab="monthly-play">🎮 玩法月度收益</button>
+    <button class="tab-btn" data-tab="monthly-team">👥 团队月度收益</button>
+    <button class="tab-btn" data-tab="annual-play">📅 玩法年度累计</button>
+    <button class="tab-btn" data-tab="annual-team">🏆 团队年度累计</button>
+  </nav>
+  <section class="panel active" id="monthly-play"><div class="module" id="filter-monthly-play"></div><div class="module" id="overview-monthly-play"></div><div class="module" id="detail-monthly-play"></div></section>
+  <section class="panel" id="monthly-team"><div class="module" id="filter-monthly-team"></div><div class="module" id="overview-monthly-team"></div><div class="module" id="detail-monthly-team"></div></section>
+  <section class="panel" id="annual-play"><div class="module" id="filter-annual-play"></div><div class="module" id="overview-annual-play"></div><div class="module" id="detail-annual-play"></div></section>
+  <section class="panel" id="annual-team"><div class="module" id="filter-annual-team"></div><div class="module" id="overview-annual-team"></div><div class="module" id="detail-annual-team"></div></section>
+</div>
+
+<script>
+/* ===== 数据 ===== */
+const RT=[{key:'incentive',name:'激励金收益',short:'激励金',color:'#4f6bed'},{key:'iap',name:'内购分成收益',short:'内购分成',color:'#22c55e'},{key:'spectrum',name:'光谱计划奖金收益',short:'光谱奖金',color:'#f59e0b'}];
+const TEAMS=[{id:'T1',name:'星辰工作室',leader:'林晚'},{id:'T2',name:'逐光工作室',leader:'苏哲'},{id:'T3',name:'蓝海互动',leader:'陈默'},{id:'T4',name:'极光游戏',leader:'顾屿'},{id:'T5',name:'幻境科技',leader:'沈青'},{id:'T6',name:'天工开物',leader:'陆遥'}];
+const GAMEPLAYS=[
+{id:'P1',name:'塔防纪元',teamId:'T1',category:'塔防'},{id:'P2',name:'星海迷航',teamId:'T1',category:'解谜'},{id:'P3',name:'云端农场',teamId:'T1',category:'模拟经营'},
+{id:'P4',name:'枪火前线',teamId:'T2',category:'射击'},{id:'P5',name:'冒险岛物语',teamId:'T2',category:'RPG'},
+{id:'P6',name:'美食大亨',teamId:'T3',category:'模拟经营'},{id:'P7',name:'牌局风云',teamId:'T3',category:'卡牌'},{id:'P8',name:'精灵物语',teamId:'T3',category:'卡牌'},
+{id:'P9',name:'极速狂飙',teamId:'T4',category:'竞技'},{id:'P10',name:'街头篮球',teamId:'T4',category:'竞技'},
+{id:'P11',name:'幻境奇谭',teamId:'T5',category:'RPG'},{id:'P12',name:'解谜大师',teamId:'T5',category:'解谜'},
+{id:'P13',name:'天工造化',teamId:'T6',category:'塔防'},{id:'P14',name:'机关城',teamId:'T6',category:'解谜'},{id:'P15',name:'山水田园',teamId:'T6',category:'休闲'}];
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rng=mulberry32(20260910);
+const YEARS=[2025,2026],MAX_MONTH={2025:12,2026:8};
+let REC=[];
+GAMEPLAYS.forEach(g=>{g.base=20000+Math.floor(rng()*120000);const w=[.18+rng()*.32,.28+rng()*.34,.05+rng()*.22],s=w.reduce((a,b)=>a+b,0);g.weights=w.map(x=>x/s)});
+YEARS.forEach(y=>{for(let m=1;m<=MAX_MONTH[y];m++)GAMEPLAYS.forEach(g=>{const growth=1+(y-2025)*.28,seasonal=.78+.5*Math.abs(Math.sin(m*.9+g.id.charCodeAt(1))),noise=.82+rng()*.36,total=g.base*growth*seasonal*noise,incentive=Math.round(total*g.weights[0]),iap=Math.round(total*g.weights[1]),spectrum=Math.round(total*g.weights[2]);REC.push({gameplayId:g.id,teamId:g.teamId,year:y,month:m,incentive,iap,spectrum,total:incentive+iap+spectrum})})});
+const TM=Object.fromEntries(TEAMS.map(t=>[t.id,t])),PM=Object.fromEntries(GAMEPLAYS.map(p=>[p.id,p]));
+const CFG={'monthly-play':{type:'month',entity:'play',name:'玩法'},'monthly-team':{type:'month',entity:'team',name:'团队'},'annual-play':{type:'year',entity:'play',name:'玩法'},'annual-team':{type:'year',entity:'team',name:'团队'}};
+let activeTab='monthly-play';
+const FILTERS={'monthly-play':{year:2026,month:8},'monthly-team':{year:2026,month:8},'annual-play':{year:2026},'annual-team':{year:2026}};
+const sortState={},searchState={},CH={};
+
+/* ===== 工具 ===== */
+const fm=v=>{v=v||0;if(v>=1e8)return(v/1e8).toFixed(2)+'亿';if(v>=1e4)return(v/1e4).toFixed(1)+'万';return v.toFixed(0)};
+const fi=v=>(v||0).toLocaleString('zh-CN');
+const pct=(p,t)=>t>0?p/t*100:0;
+
+/* ===== 汇总 ===== */
+function aggregate(){
+  const cfg=CFG[activeTab],f=FILTERS[activeTab],isYear=cfg.type==='year';
+  const recs=REC.filter(r=>r.year===f.year&&(isYear||r.month===f.month));
+  const g={};
+  recs.forEach(r=>{const k=cfg.entity==='play'?r.gameplayId:r.teamId;if(!g[k])g[k]={key:k,incentive:0,iap:0,spectrum:0,total:0};const o=g[k];o.incentive+=r.incentive;o.iap+=r.iap;o.spectrum+=r.spectrum;o.total+=r.total});
+  let list=Object.values(g);
+  if(cfg.entity==='play')list.forEach(x=>{const p=PM[x.key];x.name=p.name;x.teamName=TM[p.teamId].name;x.category=p.category});
+  else list.forEach(x=>{const t=TM[x.key];x.name=t.name;x.leader=t.leader;x.playCount=GAMEPLAYS.filter(p=>p.teamId===t.id).length});
+  return list.sort((a,b)=>b.total-a.total);
+}
+const sumBy=(l,f)=>l.reduce((s,x)=>s+(x[f]||0),0);
+function prevPeriod(f,cfgType){if(cfgType==='month'){if(f.month>1)return{year:f.year,month:f.month-1};if(f.year>YEARS[0])return{year:f.year-1,month:12};return null}return f.year>YEARS[0]?{year:f.year-1}:null}
+function periodMap(p,entity){const g={};if(!p)return g;REC.filter(r=>r.year===p.year&&(p.month==null||r.month===p.month)).forEach(r=>{const k=entity==='play'?r.gameplayId:r.teamId;if(!g[k])g[k]={incentive:0,iap:0,spectrum:0,total:0};const o=g[k];o.incentive+=r.incentive;o.iap+=r.iap;o.spectrum+=r.spectrum;o.total+=r.total});return g}
+function chgPct(cur,prev){if(!prev||prev===0)return null;return(cur-prev)/prev*100}
+function chgTag(v){if(v==null)return'<span class="chg flat">—</span>';const up=v>=0;return`<span class="chg ${up?'up':'down'}">${up?'▲':'▼'}${Math.abs(v).toFixed(1)}%</span>`}
+
+/* ===== 筛选 ===== */
+function renderFilter(){
+  const cfg=CFG[activeTab],f=FILTERS[activeTab],el=document.getElementById('filter-'+activeTab);
+  const head=`<div class="module-head"><div><div class="module-title">${cfg.type==='month'?'月份筛选':'年份筛选'}</div><div class="module-sub">选择查看对应${cfg.type==='month'?'月份':'年度'}的收益数据</div></div></div>`;
+  if(cfg.type==='month'){
+    const maxM=MAX_MONTH[f.year],pills=[];
+    for(let m=1;m<=12;m++)pills.push(`<button class="month-pill${m===f.month?' active':''}" data-m="${m}"${m>maxM?' disabled':''}>${m}月</button>`);
+    el.innerHTML=head+`<div class="filter-row"><span class="filter-label">年份</span><select class="year-select" id="ys-${activeTab}">${YEARS.map(y=>`<option value="${y}"${y===f.year?' selected':''}>${y} 年</option>`).join('')}</select><span class="filter-label">月份</span><div class="month-pills">${pills.join('')}</div></div>`;
+  }else{
+    el.innerHTML=head+`<div class="filter-row"><span class="filter-label">年份</span><div class="year-pills">${YEARS.map(y=>`<button class="year-pill${y===f.year?' active':''}" data-y="${y}">${y} 年</button>`).join('')}</div></div>`;
+  }
+}
+
+/* ===== 概览 ===== */
+function renderOverview(){
+  const cfg=CFG[activeTab],f=FILTERS[activeTab],list=aggregate();
+  const total=sumBy(list,'total'),inc=sumBy(list,'incentive'),iap=sumBy(list,'iap'),spc=sumBy(list,'spectrum');
+  const active=list.filter(x=>x.total>0).length,label=cfg.entity==='play'?'激励玩法数':'激励团队数';
+  const vals={incentive:inc,iap:iap,spectrum:spc};
+  document.getElementById('overview-'+activeTab).innerHTML=`
+    <div class="module-head"><div><div class="module-title">统计概览</div><div class="module-sub">${f.year} 年${cfg.type==='month'?' '+f.month+' 月':''} · 共 ${list.length} 个${cfg.name}</div></div></div>
+    <div class="kpi-grid">
+      <div class="kpi-card hl"><div class="kpi-label">${label}</div><div class="kpi-value">${active}<small>个</small></div><div class="kpi-sub">共 ${list.length} 个${cfg.name}</div></div>
+      <div class="kpi-card"><div class="kpi-label">总收益</div><div class="kpi-value">${fm(total)}<small>元</small></div><div class="kpi-sub">三项收益合计</div></div>
+      ${RT.map(t=>`<div class="kpi-card"><div class="kpi-label"><span class="kpi-dot" style="background:${t.color}"></span>${t.name}</div><div class="kpi-value">${fm(vals[t.key])}<small>元</small></div><div class="kpi-sub"><span class="kpi-badge">${pct(vals[t.key],total).toFixed(1)}%</span></div></div>`).join('')}
+    </div>
+    <div class="chart-grid"><div class="chart-box"><div class="box-title">收益构成占比</div><div class="box-sub">三类收益金额与占比</div><div class="chart" id="donut-${activeTab}"></div></div>
+    <div class="chart-box"><div class="box-title">Top 10 ${cfg.name}收益排行</div><div class="box-sub">按总收益降序 · 堆叠展示构成</div><div class="chart" id="bar-${activeTab}"></div></div></div>
+    <div class="chart-box"><div class="box-title">${cfg.type==='month'?'月度趋势':'年度趋势'}</div><div class="box-sub">${cfg.type==='month'?f.year+' 年各月总收益及子项走势':'各年度累计总收益及子项走势'}</div><div class="chart" id="trend-${activeTab}"></div></div>`;
+  donut(inc,iap,spc,total);bar(list);trend();
+}
+
+function donut(inc,iap,spc,total){
+  const id='donut-'+activeTab,dom=document.getElementById(id);if(!CH[id])CH[id]=echarts.init(dom);
+  CH[id].setOption({color:RT.map(t=>t.color),tooltip:{trigger:'item',formatter:p=>`${p.name}<br/>${fi(p.value)} 元 · ${p.percent}%`},legend:{bottom:0,textStyle:{fontSize:12,color:'#6b7280'}},series:[{type:'pie',radius:['52%','72%'],center:['50%','44%'],itemStyle:{borderRadius:8,borderColor:'#fff',borderWidth:2},label:{show:true,formatter:'{d}%',fontSize:12,color:'#6b7280'},data:[{name:'激励金收益',value:inc},{name:'内购分成收益',value:iap},{name:'光谱计划奖金收益',value:spc}]}]});
+}
+function bar(list){
+  const id='bar-'+activeTab,dom=document.getElementById(id);if(!CH[id])CH[id]=echarts.init(dom);
+  const top=list.slice(0,10).reverse();
+  CH[id].setOption({color:RT.map(t=>t.color),tooltip:{trigger:'axis',axisPointer:{type:'shadow'},formatter:ps=>{let s=ps[0].name;let tot=0;ps.forEach(p=>tot+=p.value);ps.forEach(p=>s+=`<br/>${p.marker}${p.seriesName}：${fi(p.value)} 元`);return s+`<br/><b>合计：${fi(tot)} 元</b>`}},legend:{top:0,textStyle:{fontSize:11}},grid:{left:110,right:16,top:36,bottom:8},xAxis:{type:'value',axisLabel:{formatter:fm}},yAxis:{type:'category',data:top.map(x=>x.name.length>6?x.name.slice(0,6)+'…':x.name),axisLabel:{fontSize:12}},series:[{name:'激励金',type:'bar',stack:'t',data:top.map(x=>x.incentive),barWidth:14},{name:'内购分成',type:'bar',stack:'t',data:top.map(x=>x.iap)},{name:'光谱奖金',type:'bar',stack:'t',data:top.map(x=>x.spectrum)}]});
+}
+function trend(){
+  const id='trend-'+activeTab,dom=document.getElementById(id);if(!CH[id])CH[id]=echarts.init(dom);
+  const cfg=CFG[activeTab],f=FILTERS[activeTab];
+  const COLORS=['#1f2430','#4f6bed','#22c55e','#f59e0b'];
+  const tip={trigger:'axis',axisPointer:{type:cfg.type==='month'?'line':'shadow'},formatter:ps=>{let s=ps[0].name;ps.forEach(p=>s+=`<br/>${p.marker}${p.seriesName}：${fi(p.value)} 元`);return s}};
+  if(cfg.type==='month'){
+    const mm=MAX_MONTH[f.year],xdata=[],tot=[],inc=[],iap=[],spc=[];
+    for(let m=1;m<=mm;m++){const r=REC.filter(x=>x.year===f.year&&x.month===m);inc.push(r.reduce((s,x)=>s+x.incentive,0));iap.push(r.reduce((s,x)=>s+x.iap,0));spc.push(r.reduce((s,x)=>s+x.spectrum,0));tot.push(r.reduce((s,x)=>s+x.total,0));xdata.push(m+'月')}
+    const mk=(n,d,c,w)=>({name:n,type:'line',smooth:true,symbol:'circle',symbolSize:w?7:5,data:d,itemStyle:{color:c},lineStyle:{width:w?3:2}});
+    CH[id].setOption({color:COLORS,tooltip:tip,legend:{top:0,textStyle:{fontSize:11}},grid:{left:50,right:20,top:36,bottom:28},xAxis:{type:'category',data:xdata},yAxis:{type:'value',axisLabel:{formatter:fm}},series:[mk('总收益',tot,COLORS[0],1),mk('激励金收益',inc,COLORS[1]),mk('内购分成收益',iap,COLORS[2]),mk('光谱计划奖金收益',spc,COLORS[3])]});
+  }else{
+    const xdata=YEARS.map(y=>y+' 年'),tot=[],inc=[],iap=[],spc=[];
+    YEARS.forEach(y=>{const r=REC.filter(x=>x.year===y);inc.push(r.reduce((s,x)=>s+x.incentive,0));iap.push(r.reduce((s,x)=>s+x.iap,0));spc.push(r.reduce((s,x)=>s+x.spectrum,0));tot.push(r.reduce((s,x)=>s+x.total,0))});
+    const mk=(n,d,c)=>({name:n,type:'bar',barWidth:18,data:d,itemStyle:{color:c,borderRadius:3}});
+    CH[id].setOption({color:COLORS,tooltip:tip,legend:{top:0,textStyle:{fontSize:11}},grid:{left:50,right:20,top:36,bottom:28},xAxis:{type:'category',data:xdata},yAxis:{type:'value',axisLabel:{formatter:fm}},series:[mk('总收益',tot,COLORS[0]),mk('激励金',inc,COLORS[1]),mk('内购分成',iap,COLORS[2]),mk('光谱奖金',spc,COLORS[3])]});
+  }
+}
+
+/* ===== 明细表 ===== */
+function renderTable(){
+  const cfg=CFG[activeTab],f=FILTERS[activeTab];
+  let list=aggregate();
+  const q=(searchState[activeTab]||'').trim().toLowerCase();
+  if(q)list=list.filter(x=>x.name.toLowerCase().includes(q)||(x.teamName||'').toLowerCase().includes(q)||(x.leader||'').toLowerCase().includes(q));
+  const s=sortState[activeTab]||{k:'total',dir:-1};
+  list.sort((a,b)=>{(a[s.k]||0)<(b[s.k]||0)?1:(a[s.k]||0)>(b[s.k]||0)?-1:0});if(s.dir===1)list.reverse();
+  const total=sumBy(list,'total');
+  const isPlay=cfg.entity==='play';
+  const chgLabel=cfg.type==='month'?'环比上月':'同比去年';
+  const prevMap=periodMap(prevPeriod(f,cfg.type),cfg.entity);
+  const head=isPlay?['玩法名称','所属团队','类别']:['团队名称','负责人','玩法数'];
+  const cols=[...head,'激励金收益','内购分成收益','光谱奖金收益','总收益','占比'];
+  const keys=isPlay?['name','teamName','category']:['name','leader','playCount'];
+  const moneyKeys=['incentive','iap','spectrum','total'];
+  const arrow=(k)=>s.k===k?(s.dir===-1?'▼':'▲'):'';
+  const ths=cols.map((c,i)=>{const sk=i<3?keys[i]:(moneyKeys[i-3]||'pct');const isMoney=i>=3&&i<cols.length-1;const label=isMoney?`${c}<small class="th-sub">${chgLabel}</small>`:c;return`<th data-sort="${sk}" ${i>=3?'class="num"':''}>${label} ${arrow(sk)}</th>`}).join('');
+  const rows=list.map((x,i)=>{const rk=i+1;const rkCls=rk<=3?' r'+rk:'';const pv=prevMap[x.key]||null;
+    const m=(cur,prev)=>`<td class="num"><div>${fi(cur)}</div>${chgTag(chgPct(cur,prev))}</td>`;
+    return`<tr>
+      <td><span class="rank${rkCls}">${rk}</span></td>
+      <td class="name-cell">${x.name}</td>
+      ${isPlay?`<td><span class="tag">${x.teamName}</span></td><td><span class="tag type">${x.category}</span></td>`:`<td>${x.leader}</td><td>${x.playCount}</td>`}
+      ${m(x.incentive,pv&&pv.incentive)}${m(x.iap,pv&&pv.iap)}${m(x.spectrum,pv&&pv.spectrum)}
+      <td class="num total-cell"><div>${fi(x.total)}</div>${chgTag(chgPct(x.total,pv&&pv.total))}</td>
+      <td class="num">${pct(x.total,total).toFixed(1)}%</td></tr>`});
+  document.getElementById('detail-'+activeTab).innerHTML=`
+    <div class="module-head"><div><div class="module-title">${cfg.name}收益明细</div><div class="module-sub">${f.year} 年${cfg.type==='month'?' '+f.month+' 月':''} · 共 ${list.length} 条记录 · 收益含${chgLabel}变化</div></div></div>
+    <div class="table-toolbar"><input class="search-input" placeholder="搜索名称/团队/负责人" value="${searchState[activeTab]||''}"><button class="btn-export">导出 CSV</button></div>
+    <div class="table-wrap"><table><thead><tr><th>#</th>${ths}</tr></thead>
+    <tbody>${list.length?rows.join(''):'<tr><td colspan="9" class="empty">暂无数据</td></tr>'}</tbody></table></div>`;
+}
+
+/* ===== 渲染 ===== */
+function renderAll(){renderFilter();renderOverview();renderTable();bindEvents()}
+
+/* ===== 事件绑定 ===== */
+function bindEvents(){
+  const el=document.getElementById('detail-'+activeTab);
+  el.querySelector('.search-input').addEventListener('input',e=>{searchState[activeTab]=e.target.value;renderTable()});
+  el.querySelector('.btn-export').addEventListener('click',exportCSV);
+  el.querySelectorAll('th[data-sort]').forEach(th=>th.addEventListener('click',()=>{const k=th.dataset.sort;const cur=sortState[activeTab];sortState[activeTab]={k,dir:cur&&cur.k===k?cur.dir*-1:-1};renderTable()}));
+  const fe=document.getElementById('filter-'+activeTab);
+  if(CFG[activeTab].type==='month'){
+    fe.querySelectorAll('.month-pill').forEach(b=>b.addEventListener('click',()=>{FILTERS[activeTab].month=+b.dataset.m;renderAll()}));
+    const ys=fe.querySelector('.year-select');if(ys)ys.addEventListener('change',e=>{FILTERS[activeTab].year=+e.target.value;const mm=MAX_MONTH[FILTERS[activeTab].year];if(FILTERS[activeTab].month>mm)FILTERS[activeTab].month=mm;renderAll()});
+  }else{
+    fe.querySelectorAll('.year-pill').forEach(b=>b.addEventListener('click',()=>{FILTERS[activeTab].year=+b.dataset.y;renderAll()}));
+  }
+}
+function exportCSV(){
+  const cfg=CFG[activeTab],list=aggregate(),isPlay=cfg.entity==='play';
+  const head=isPlay?['排名','玩法名称','所属团队','类别','激励金收益','内购分成收益','光谱奖金收益','总收益']:['排名','团队名称','负责人','玩法数','激励金收益','内购分成收益','光谱奖金收益','总收益'];
+  const rows=list.map((x,i)=>isPlay?[i+1,x.name,x.teamName,x.category,x.incentive,x.iap,x.spectrum,x.total]:[i+1,x.name,x.leader,x.playCount,x.incentive,x.iap,x.spectrum,x.total]);
+  const csv='\ufeff'+[head,...rows].map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`${cfg.title||cfg.name}_收益明细.csv`;a.click();
+}
+
+/* ===== 页签切换 ===== */
+document.getElementById('tabs').addEventListener('click',e=>{
+  const btn=e.target.closest('.tab-btn');if(!btn)return;
+  activeTab=btn.dataset.tab;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.toggle('active',b===btn));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===activeTab));
+  renderAll();
+  setTimeout(()=>Object.keys(CH).forEach(k=>{if(CH[k]&&document.getElementById(k))CH[k].resize()}),50);
+});
+window.addEventListener('resize',()=>Object.keys(CH).forEach(k=>{if(CH[k])CH[k].resize()}));
+
+/* ===== 初始化 ===== */
+renderAll();
+</script>
+</body>
+</html>
